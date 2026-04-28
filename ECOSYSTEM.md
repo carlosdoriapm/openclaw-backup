@@ -42,18 +42,32 @@ Entregue apenas o conteudo final. Sem explicacoes ou comentarios."
 **Etapa 1 - Raspar a URL via exec:**
 ```
 python3 -c "
-import urllib.request, json
+import urllib.request, json, os, urllib.parse
+
 url = 'URL_FORNECIDA_POR_CARLOS'
-key = 'fc-45863fcab8aa4667ae13cc3c9278e667'
-req = urllib.request.Request(
-    'https://api.firecrawl.dev/v1/scrape',
-    data=json.dumps({'url': url, 'formats': ['markdown']}).encode(),
-    headers={'Authorization': 'Bearer ' + key, 'Content-Type': 'application/json'},
-    method='POST'
-)
-with urllib.request.urlopen(req, timeout=45) as r:
-    data = json.loads(r.read().decode())
-    print(data['data']['markdown'][:25000] if data.get('success') else data.get('error'))
+fc_key = 'fc-45863fcab8aa4667ae13cc3c9278e667'
+sf_key = os.environ.get('SCRAPFLY_API_KEY', 'scp-live-62db436e668544c1b8e5e10bc1f7b726')
+
+# Tenta Firecrawl primeiro
+try:
+    req = urllib.request.Request(
+        'https://api.firecrawl.dev/v1/scrape',
+        data=json.dumps({'url': url, 'formats': ['markdown']}).encode(),
+        headers={'Authorization': 'Bearer ' + fc_key, 'Content-Type': 'application/json'},
+        method='POST'
+    )
+    with urllib.request.urlopen(req, timeout=45) as r:
+        data = json.loads(r.read().decode())
+        print(data['data']['markdown'][:25000] if data.get('success') else data.get('error'))
+except Exception as e:
+    print(f'Firecrawl falhou ({e}). Tentando Scrapfly...')
+    # Fallback para Scrapfly
+    encoded_url = urllib.parse.quote(url)
+    sf_url = f'https://api.scrapfly.io/scrape?key={sf_key}&url={encoded_url}&format=markdown'
+    req_sf = urllib.request.Request(sf_url, headers={'User-Agent': 'Mozilla/5.0'})
+    with urllib.request.urlopen(req_sf, timeout=45) as r:
+        data = json.loads(r.read().decode())
+        print(data['result']['content'][:25000] if data.get('result') else 'Erro no Scrapfly')
 "
 ```
 
@@ -68,7 +82,7 @@ CONTEUDO RASPADO DA LANDING PAGE:
 
 Entregue analise estruturada: angulo de vendas, objecoes quebradas, publico-alvo, ticket, oferta. Compare com o brand da Zeluna."
 
-**Modelo:** google/gemini-2.0-flash (via API do Google - rapido e barato)
+**Modelo:** google/gemini-2.5-flash (via API do Google - rapido e barato)
 
 ---
 
